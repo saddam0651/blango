@@ -1,0 +1,153 @@
+if key in cache:
+    # get the value from the cache if it exists
+    value = cache.get(key)_
+else:
+    # calculate the value and store it in the cache so it can be fetched next time
+    value = calculate_value_for_key(key)
+    cache.set(key, value)
+
+
+# store the count of all the posts in the system for 300 seconds (5 minutes)
+cache.set("post_count", post_count, 300)
+# if displaying a post count on the site, we'd only need to fetch and count them once every 5 minutes
+
+class Post:
+    def save(self, *args, **kwargs):
+        super(Post, self).save(*args, **kwargs)
+
+        # delete this post content from the cache on save
+        cache.delete(f"post_content_{self.pk}")
+
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
+        "LOCATION"": "127.0.0.1:11211",
+    }
+}
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "my_cache_table",
+    }
+}
+
+$ python manage.py createcachetable
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": "/var/tmp/django_cache",
+    }
+}
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
+    }
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+    }
+}
+
+
+from django.core.cache import caches
+default_cache = caches["default"]
+
+
+from django.core.cache import cache
+# cache is the equivalent of caches["default"]/our default_cache variable
+
+
+In [1]: from django.core.cache import cache
+
+In [2]: from blog.models import Post
+In [3]: post_pk = 1
+
+In [4]: p = Post.objects.get(pk=1)
+
+In [5]: cache.set(f"post_{post_pk}", p, 30)
+In [6]: p1 = cache.get(f"post_{post_pk}")
+
+In [7]: p == p1
+Out[7]: True
+In [8]: print(cache.get(f"post_{post_pk}"))
+Out[8]: None
+In [9]: cache.get(f"post_{post_pk}")
+
+In [10]: cache.delete(f"post_{post_pk}")
+Out[10]: True
+
+In [11]: cache.delete("a made up cache key")
+Out[11]: False
+In [12]: sentinel = object()
+
+In [13]: cache.set("current_user", None, 30)
+
+In [14]: u = cache.get("current_user", sentinel)
+
+In [15]: u is None
+Out[15]: True
+
+In [16]: u is sentinel
+Out[16]: False
+In [17]: u = cache.get("current_user", sentinel)
+
+In [18]: u is sentinel
+Out[18]: True
+
+In [3]: all_posts = Post.objects.all()
+
+In [4]: posts_to_cache = {f"post_{post.pk}": post for post in all_posts}
+
+In [5]: posts_to_cache
+Out[5]: {'post_7': <Post: Leo: A Personal Profile>, 'post_6': <Post: Django vs Python>, 'post_5': <Post: Breaking News>, 'post_4': <Post: A Real Post>, 'post_3': <Post: Yet another test post!>, 'post_1': <Post: An Example Post>, 'post_2': <Post: Advanced Django: A Review>}
+
+In [6]: cache.set_many(posts_to_cache, 30)
+Out[6]: []
+In [7]: cache.get("post_2")
+Out[7]: <Post: Advanced Django: A Review>
+In [8]: cache.get_many(["post_1", "post_2", "post_1000"])
+Out[8]: {'post_1': <Post: An Example Post>, 'post_2': <Post: Advanced Django: A Review>}
+
+In [9]: cache.set("none_value", None, 30)
+
+In [10]: cache.get_many(["none_value"])
+Out[10]: {'none_value': None}
+
+# wait 30 seconds
+
+In [11]: cache.get_many(["none_value"])
+Out[11]: {}
+
+In [12]: cache.set("key1", "value1")
+
+In [13]: cache.get_or_set("key1", "value2")
+Out[13]: 'value1'
+
+In [14]: cache.get_or_set("key2", "value3")
+Out[14]: 'value3'
+
+In [15]: cache.get_or_set("key2", "value4")
+Out[15]: 'value3'
+
+def get_latest_post():
+    return Post.objects.first()
+
+
+p = cache.get("latest_post")
+
+if not p:
+    p = get_latest_post()
+    p.set("latest_post", p)
+
+p = cache.get_or_set("latest_post", get_latest_post)
